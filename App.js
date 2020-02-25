@@ -1,29 +1,31 @@
-import React from "react";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import React, {useState, useEffect, useRef } from "react";
+import { StyleSheet, Text, View, TouchableOpacity} from "react-native";
+import {CameraRoll} from 'react-native-cameraroll'
 import { Camera } from "expo-camera";
 import * as Permissions from "expo-permissions";
 import { FontAwesome } from "@expo/vector-icons";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 
-class App extends React.Component {
-  state = {
-    hasPermission: null,
-    type: Camera.Constants.Type.back
-  };
+const App = () => {
+  let [permission, setPermission] = useState(null);
+  let [type, setType] = useState(Camera.Constants.Type.back);
+  const camRef = useRef(null)
+  useEffect(() => {
+    getPermissionAsync();
+  }, [])
   handleCameraType = () => {
-    const { cameraType } = this.state;
-
-    this.setState({
-      cameraType:
-        cameraType === Camera.Constants.Type.back
+    setType(
+        type === Camera.Constants.Type.back
           ? Camera.Constants.Type.front
           : Camera.Constants.Type.back
-    });
+    );
   };
   takePicture = async () => {
-    if (this.camera) {
-      let photo = await this.camera.takePictureAsync();
+    if (camRef.current) {
+      const {uri} = await camRef.current.takePictureAsync();
+      console.log('picture taken')
+      //CameraRoll.saveToCameraRoll(uri);
     }
   };
   pickImage = async () => {
@@ -31,9 +33,7 @@ class App extends React.Component {
       mediaTypes: ImagePicker.MediaTypeOptions.Images
     });
   };
-  async componentDidMount() {
-    this.getPermissionAsync();
-  }
+  
   getPermissionAsync = async () => {
     // Camera roll Permission
     if (Platform.OS === "ios") {
@@ -44,23 +44,20 @@ class App extends React.Component {
     }
     // Camera Permission
     const { status } = await Permissions.askAsync(Permissions.CAMERA);
-    this.setState({ hasPermission: status === "granted" });
-  };
-  render() {
-    const { hasPermission } = this.state;
-    if (hasPermission === null) {
+    setPermission(status === "granted" );
+    };
+
+    if (permission === null) {
       return <View />;
-    } else if (hasPermission === false) {
+    } else if (permission === false) {
       return <Text>No access to camera</Text>;
     } else {
       return (
         <View style={{ flex: 1 }}>
           <Camera
             style={{ flex: 1 }}
-            type={this.state.cameraType}
-            ref={ref => {
-              this.camera = ref;
-            }}
+            type={type}
+            ref={camRef}
           >
             <View
               style={{
@@ -76,7 +73,7 @@ class App extends React.Component {
                   alignItems: "center",
                   backgroundColor: "transparent"
                 }}
-                onPress={() => this.pickImage()}
+                onPress={pickImage}
               >
                 <Ionicons
                   name="ios-photos"
@@ -89,7 +86,7 @@ class App extends React.Component {
                   alignItems: "center",
                   backgroundColor: "transparent"
                 }}
-                onPress={() => this.takePicture()}
+                onPress={takePicture}
               >
                 <FontAwesome
                   name="camera"
@@ -102,7 +99,7 @@ class App extends React.Component {
                   alignItems: "center",
                   backgroundColor: "transparent"
                 }}
-                onPress={() => this.handleCameraType()}
+                onPress={handleCameraType}
               >
                 <MaterialCommunityIcons
                   name="camera-switch"
@@ -114,7 +111,6 @@ class App extends React.Component {
         </View>
       );
     }
-  }
 }
 
 const styles = StyleSheet.create({
